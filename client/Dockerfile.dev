@@ -1,0 +1,10 @@
+FROM node:16-alpine
+
+WORKDIR '/app'
+
+COPY package.json .
+RUN npm install
+# niet per se nodig zolang volumes gesynchroniseerd worden in docker-compose.yml. COPY instructie voor de volledigheid wel vet pienter mocht docker-compose ooit vervangen worden
+COPY . .
+
+CMD ["npm", "run", "start"]
