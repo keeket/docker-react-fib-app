@@ -1,0 +1,66 @@
+version: '3'
+services:
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  api:
+    build:
+      # instellen te gebruiken dockerfile voor server service 
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      # negeer wijzigingen in node_modules, wel ./server files mappen
+      - /app/node_modules
+      - ./server:/app
+    environment:
+      # host adressen worden gedeeld binnen docker, hiervoor volstaat een vermelding van de servicenaam
+      - REDIS_HOST=redis
+      # redis defaultpoort gebruikt, dit is normaal gesproken terug te vinden in de documentatie bij de redis docker image op dockerhub maar stond er niet (meer) op 29 januari. zoek evt op EXPOSE keyword of draai de server en kijk welke poort ie logt in zn startup
+      - REDIS_PORT=6379
+      # documentatie op dockerhub of beginpunt van je zoektocht
+      - PG_USER=postgres
+      - PG_HOST=postgres
+      - PG_DATABASE=postgres
+      - PG_PASSWORD=postgres_password
+      - PG_PORT=5432
+  client:
+    # voorkom dat react-app direct afsluit na docker-comppose up
+    stdin_open: true
+    build:
+      # instellen te gebruiken dockerfile voor client service 
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      # negeer wijzigingen in node_modules, wel ./client files mappen
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    build:
+      # instellen te gebruiken dockerfile voor worker service 
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      # negeer wijzigingen in node_modules, wel ./worker files mappen
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      # host adressen worden gedeeld binnen docker, hiervoor volstaat een vermelding van de servicenaam
+      - REDIS_HOST=redis
+      # redis defaultpoort gebruikt, dit is normaal gesproken terug te vinden in de documentatie bij de redis docker image op dockerhub maar stond er niet (meer) op 29 januari. zoek evt op EXPOSE keyword of draai de server en kijk welke poort ie logt in zn startup
+      - REDIS_PORT=6379
+  nginx:
+    # router moet altijd aanstaan anders is er geen site voor de mensen
+    restart: always
+    # volgordelijkheid aanbrengen
+    depends_on:
+      - api
+      - client
+    build:
+      # instellen te gebruiken dockerfile voor worker service 
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
